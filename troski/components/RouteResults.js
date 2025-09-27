@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView, ActivityIndicator, Animated, PanResponder, ScrollView } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,6 +16,52 @@ export default function RouteResults({ route, navigation }) {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Bottom sheet state & gesture
+  const collapsedHeight = Math.min(screenHeight * 0.28, 320);
+  const expandedHeight = Math.min(screenHeight * 0.72, 700);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sheetHeight = useRef(new Animated.Value(collapsedHeight)).current;
+  const gestureStartHeightRef = useRef(collapsedHeight);
+
+  const snapTo = (targetHeight) => {
+    Animated.spring(sheetHeight, {
+      toValue: targetHeight,
+      useNativeDriver: false,
+      tension: 120,
+      friction: 14,
+    }).start();
+    setIsExpanded(targetHeight === expandedHeight);
+  };
+
+  const toggleExpand = () => {
+    snapTo(isExpanded ? collapsedHeight : expandedHeight);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+      onPanResponderGrant: () => {
+        sheetHeight.stopAnimation((value) => {
+          gestureStartHeightRef.current = value;
+        });
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const proposed = gestureStartHeightRef.current - gestureState.dy;
+        const clamped = Math.max(collapsedHeight, Math.min(expandedHeight, proposed));
+        sheetHeight.setValue(clamped);
+      },
+      onPanResponderRelease: () => {
+        // Snap to nearest point
+        sheetHeight.stopAnimation((value) => {
+          const mid = (collapsedHeight + expandedHeight) / 2;
+          const target = value >= mid ? expandedHeight : collapsedHeight;
+          snapTo(target);
+        });
+      },
+    })
+  ).current;
 
   useEffect(() => {
     const fetchRoutes = async () => {
@@ -83,23 +129,25 @@ export default function RouteResults({ route, navigation }) {
           ))}
         </MapView>
         
-        <View style={styles.bottomSheet}>
-          <View style={styles.dragBar} />
-          <Text style={styles.chooseRoute}>Choose a Route</Text>
-          
+        <Animated.View style={[styles.bottomSheet, { height: sheetHeight }] }>
+          <TouchableOpacity activeOpacity={0.9} onPress={toggleExpand} {...panResponder.panHandlers}>
+            <View style={styles.dragBar} />
+          </TouchableOpacity>
+          <Text style={styles.chooseRoute}>
+            {isExpanded ? 'All Routes' : `Top ${Math.min(2, routes.length)} Routes`}
+          </Text>
           {routes.length === 0 ? (
             <View style={styles.noRoutesContainer}>
               <Text style={styles.noRoutesText}>No routes found.</Text>
             </View>
           ) : (
-            <View style={styles.routesList}>
-              {routes.map((r, idx) => (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.routesList}>
+              {(isExpanded ? routes : routes.slice(0, 2)).map((r, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={styles.routeRow}
                   onPress={() => navigation.navigate('RouteDetails', { routeInfo: r })}
                 >
-                  {/* Top row: title (left) + arrival time (right) */}
                   <View style={styles.rowTop}>
                     <Text style={styles.routeTitle} numberOfLines={1}>
                       {r.name || `Route ${idx + 1}`}
@@ -108,14 +156,11 @@ export default function RouteResults({ route, navigation }) {
                       {r.arrival_time?.text || r.timeRange || r.time || ''}
                     </Text>
                   </View>
-
-                  {/* Bottom row: meta left (icon + km) and timing right (badge + duration) */}
                   <View style={styles.rowBottom}>
                     <View style={styles.routeMeta}>
                       <Ionicons name="git-compare-outline" size={screenWidth * 0.045} color="#888" />
                       <Text style={styles.kmText}>{r.distance || ''}</Text>
                     </View>
-
                     <View style={styles.timingMeta}>
                       {idx === 0 && (
                         <View style={styles.fastestBadge}>
@@ -129,9 +174,9 @@ export default function RouteResults({ route, navigation }) {
                   </View>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -185,7 +230,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
-    maxHeight: screenHeight * 0.45,
   },
   dragBar: {
     width: screenWidth * 0.15,
