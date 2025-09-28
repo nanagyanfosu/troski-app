@@ -52,17 +52,17 @@ A comprehensive React Native application for public transport route planning in 
 ### Project Structure
 
 **troski/**
-    **index.js**: App entry, registers the navigator
-    navigation.js: Stack navigator for screens
-    **App.js**: Landing screen (splash-like), loads fonts then routes to HomeScreen
+  - **index.js**: App entry, registers the navigator
+  - **navigation.js**: Stack navigator for screens
+  - **App.js**: Landing screen (splash-like), loads fonts then routes to HomeScreen    
 **components/**
-    **HomeScreen.js**: Inputs, current location fetch, navigation to results
-    **RouteResults.js**: Fetches candidate routes, map markers, bottom sheet list
-    **RouteDetails.js**: Route metadata, traffic card, CTA to map
-    **RouteMapView.js**: Fetches directions, decodes polyline, renders markers + polyline
+  - **HomeScreen.js**: Inputs, current location fetch, navigation to results
+  - **RouteResults.js**: Fetches candidate routes, map markers, bottom sheet list
+  - **RouteDetails.js**: Route metadata, traffic card, CTA to map
+  - **RouteMapView.js**: Fetches directions, decodes polyline, renders markers + polyline    
 **assets/**: Icons, splash, fonts, colors
-    **package.json**: Scripts and dependencies
-    **app.json**: Expo app config (iOS/Android bundles, splash, icons)
+  - **package.json**: Scripts and dependencies
+  - **app.json**: Expo app config (iOS/Android bundles, splash, icons)    
 **eas.json**: Build profiles
 **react-native.config.js**: Font linking (for bare builds)
 **README.md**: All about the project
