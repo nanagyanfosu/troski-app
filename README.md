@@ -6,9 +6,13 @@ A comprehensive React Native application for public transport route planning in 
 
 ### Core Functionality
 - **Route Planning**: Find optimal public transport routes between any two locations in Ghana
+
 - **Real-time Traffic Data**: Live traffic conditions with delay estimates
+
 - **Multiple Route Options**: Compare different route alternatives with detailed information
+
 - **Interactive Maps**: Visual route representation with markers and polylines
+
 - **Arrival Time Estimates**: Precise arrival time predictions based on current traffic
 
 ### Advanced Features
