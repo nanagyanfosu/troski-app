@@ -157,7 +157,8 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
 
 ### Frontend Setup
 ```bash
-cd troski-app/troski
+cd troski-app
+cd troski
 npm install
 npx expo start
 ```
@@ -166,7 +167,8 @@ npx expo start
 
 ### Backend Setup
 ```bash
-cd troski-backend-1/troski-backend
+cd troski-backend-1
+cd troski-backend
 npm install
 ```
 
