@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView, ActivityIndicator, Animated, PanResponder } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export default function RouteResults({ route, navigation }) {
-  // User input from previous screen
   const { origin, destination } = route.params || {};
   const [region, setRegion] = useState({
     latitude: 5.6506,
@@ -17,20 +17,24 @@ export default function RouteResults({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Bottom sheet config
+  const MIN_HEIGHT = screenHeight * 0.28;   // collapsed (fits ~2 rows)
+  const MAX_HEIGHT = screenHeight * 0.8;    // expanded (~80% of screen)
+  const heightAnim = useRef(new Animated.Value(MIN_HEIGHT)).current;
+  const startHeightRef = useRef(MIN_HEIGHT);
+  const [expanded, setExpanded] = useState(false);
+
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
         setLoading(true);
         setError(null);
-        // Replace with your backend URL
         const backendUrl = 'https://troski-backend.vercel.app/api/routes';
         const url = `${backendUrl}?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch routes');
         const data = await response.json();
-        // Expecting data.routes to be an array of route options
         setRoutes(data.routes || []);
-        // Optionally, center map on first route
         if (data.routes && data.routes[0]?.start_location) {
           setRegion({
             latitude: data.routes[0].start_location.lat,
@@ -47,6 +51,49 @@ export default function RouteResults({ route, navigation }) {
     };
     if (origin && destination) fetchRoutes();
   }, [origin, destination]);
+
+  const springTo = (target) => {
+    startHeightRef.current = target;
+    Animated.spring(heightAnim, {
+      toValue: target,
+      useNativeDriver: false,
+      stiffness: 220,
+      damping: 24,
+      mass: 0.6,
+    }).start(() => {
+      setExpanded(target === MAX_HEIGHT);
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        heightAnim.stopAnimation((val) => {
+          if (typeof val === 'number') startHeightRef.current = val;
+        });
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        const proposed = startHeightRef.current - gestureState.dy; // drag up -> dy<0 -> increase height
+        const clamped = Math.max(MIN_HEIGHT, Math.min(proposed, MAX_HEIGHT));
+        heightAnim.setValue(clamped);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        const current = Math.max(MIN_HEIGHT, Math.min(startHeightRef.current - gestureState.dy, MAX_HEIGHT));
+        const mid = (MIN_HEIGHT + MAX_HEIGHT) / 2;
+        const biased = current - gestureState.vy * 40; // upward fling favors expand
+        const target = biased < mid ? MAX_HEIGHT : MIN_HEIGHT;
+        springTo(target);
+      },
+      onPanResponderTerminate: () => {
+        const current = startHeightRef.current;
+        const target = Math.abs(current - MAX_HEIGHT) < Math.abs(current - MIN_HEIGHT) ? MAX_HEIGHT : MIN_HEIGHT;
+        springTo(target);
+      },
+    })
+  ).current;
+
+  const displayRoutes = expanded ? routes : routes.slice(0, 2);
 
   if (loading) {
     return (
@@ -74,17 +121,22 @@ export default function RouteResults({ route, navigation }) {
           showsMyLocationButton
         >
           {routes.length > 0 && routes.map((r, idx) => (
-            <Marker
-              key={idx}
-              coordinate={{ latitude: r.start_location.lat, longitude: r.start_location.lng }}
-              title={r.name || `Route ${idx + 1}`}
-              description={r.origin}
-            />
+            r?.start_location?.lat != null && r?.start_location?.lng != null ? (
+              <Marker
+                key={idx}
+                coordinate={{ latitude: r.start_location.lat, longitude: r.start_location.lng }}
+                title={r.name || `Route ${idx + 1}`}
+                description={r.origin}
+              />
+            ) : null
           ))}
         </MapView>
         
-        <View style={styles.bottomSheet}>
-          <View style={styles.dragBar} />
+        <Animated.View style={[styles.bottomSheet, { height: heightAnim }]}>
+          <View
+            style={styles.dragBar}
+            {...panResponder.panHandlers}
+          />
           <Text style={styles.chooseRoute}>Choose a Route</Text>
           
           {routes.length === 0 ? (
@@ -93,13 +145,13 @@ export default function RouteResults({ route, navigation }) {
             </View>
           ) : (
             <View style={styles.routesList}>
-              {routes.map((r, idx) => (
+              {displayRoutes.map((r, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={styles.routeRow}
                   onPress={() => navigation.navigate('RouteDetails', { routeInfo: r })}
+                  activeOpacity={0.85}
                 >
-                  {/* Top row: title (left) + arrival time (right) */}
                   <View style={styles.rowTop}>
                     <Text style={styles.routeTitle} numberOfLines={1}>
                       {r.name || `Route ${idx + 1}`}
@@ -109,7 +161,6 @@ export default function RouteResults({ route, navigation }) {
                     </Text>
                   </View>
 
-                  {/* Bottom row: meta left (icon + km) and timing right (badge + duration) */}
                   <View style={styles.rowBottom}>
                     <View style={styles.routeMeta}>
                       <Ionicons name="git-compare-outline" size={screenWidth * 0.045} color="#888" />
@@ -129,9 +180,21 @@ export default function RouteResults({ route, navigation }) {
                   </View>
                 </TouchableOpacity>
               ))}
+
+              {routes.length > 2 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => springTo(expanded ? MIN_HEIGHT : MAX_HEIGHT)}
+                >
+                  <Text style={styles.showMoreText}>
+                    {expanded ? 'Show less' : `Show ${routes.length - 2} more routes`}
+                  </Text>
+                  <Ionicons name={expanded ? 'chevron-down' : 'chevron-up'} size={screenWidth * 0.04} color="#1566d6" />
+                </TouchableOpacity>
+              )}
             </View>
           )}
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -185,13 +248,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
-    maxHeight: screenHeight * 0.45,
+    overflow: 'hidden',
   },
   dragBar: {
-    width: screenWidth * 0.15,
-    height: 5,
+    width: screenWidth * 0.18,
+    height: 12,
     backgroundColor: '#ccc',
-    borderRadius: 3,
+    borderRadius: 6,
     alignSelf: 'center',
     marginBottom: screenHeight * 0.01,
   },
@@ -211,13 +274,13 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   routesList: {
-    gap: screenHeight * 0.02,
+    gap: screenHeight * 0.015,
   },
   routeRow: {
     flexDirection: 'column',
     justifyContent: 'flex-start',
     alignItems: 'stretch',
-    paddingVertical: screenHeight * 0.02,
+    paddingVertical: screenHeight * 0.016,
     paddingHorizontal: screenWidth * 0.03,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
@@ -229,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: screenWidth * 0.03,
-    marginBottom: screenHeight * 0.0075,
+    marginBottom: screenHeight * 0.0065,
   },
   rowBottom: {
     flexDirection: 'row',
@@ -249,7 +312,7 @@ const styles = StyleSheet.create({
   kmText: {
     color: '#888',
     fontSize: screenWidth * 0.04,
-    marginLeft: screenWidth * 0.005,
+    marginLeft: screenWidth * 0.008,
   },
   timeText: {
     fontSize: screenWidth * 0.06,
@@ -279,5 +342,21 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: screenWidth * 0.04,
     marginLeft: screenWidth * 0.005,
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: screenHeight * 0.015,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1566d6',
+  },
+  showMoreText: {
+    color: '#1566d6',
+    fontSize: screenWidth * 0.04,
+    fontWeight: '500',
+    marginRight: screenWidth * 0.01,
   },
 });

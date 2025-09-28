@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions, SafeAreaView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions, SafeAreaView, Animated, PanResponder } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -15,6 +15,51 @@ export default function RouteMapView({ route, navigation }) {
   const [polylineCoords, setPolylineCoords] = useState([]);
   const [travelTime, setTravelTime] = useState('');
   const [distance, setDistance] = useState('');
+
+  // Draggable bottom sheet (collapsed by default, expandable to ~80% screen)
+  const MIN_HEIGHT = screenHeight * 0.28;
+  const MAX_HEIGHT = screenHeight * 0.8;
+  const heightAnim = useRef(new Animated.Value(MIN_HEIGHT)).current;
+  const startHeightRef = useRef(MIN_HEIGHT);
+
+  const springTo = (target) => {
+    startHeightRef.current = target;
+    Animated.spring(heightAnim, {
+      toValue: target,
+      useNativeDriver: false,
+      stiffness: 220,
+      damping: 24,
+      mass: 0.6,
+    }).start();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        heightAnim.stopAnimation((val) => {
+          if (typeof val === 'number') startHeightRef.current = val;
+        });
+      },
+      onPanResponderMove: (_evt, g) => {
+        const proposed = startHeightRef.current - g.dy; // drag up => dy<0 => increase height
+        const clamped = Math.max(MIN_HEIGHT, Math.min(proposed, MAX_HEIGHT));
+        heightAnim.setValue(clamped);
+      },
+      onPanResponderRelease: (_evt, g) => {
+        const current = Math.max(MIN_HEIGHT, Math.min(startHeightRef.current - g.dy, MAX_HEIGHT));
+        const mid = (MIN_HEIGHT + MAX_HEIGHT) / 2;
+        const biased = current - g.vy * 40; // upward fling favors expand
+        const target = biased < mid ? MAX_HEIGHT : MIN_HEIGHT;
+        springTo(target);
+      },
+      onPanResponderTerminate: () => {
+        const current = startHeightRef.current;
+        const target = Math.abs(current - MAX_HEIGHT) < Math.abs(current - MIN_HEIGHT) ? MAX_HEIGHT : MIN_HEIGHT;
+        springTo(target);
+      },
+    })
+  ).current;
 
   useEffect(() => {
     const fetchDirections = async () => {
@@ -101,7 +146,6 @@ export default function RouteMapView({ route, navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.mapContainer}>
-        {/* Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={screenWidth * 0.07} color="#222" />
@@ -135,16 +179,14 @@ export default function RouteMapView({ route, navigation }) {
           )}
         </MapView>
         
-        {/* Bottom Card */}
-        <View style={styles.bottomSheet}>
-          <View style={styles.dragBar} />
+        <Animated.View style={[styles.bottomSheet, { height: heightAnim }]}>
+          <View style={styles.dragBar} {...panResponder.panHandlers} />
           <Text style={styles.arrival}>
             {routeData?.routes?.[0]?.arrival_time?.text 
               ? `Arrives at ${routeData.routes[0].arrival_time.text}` 
               : `Arrival in ${travelTime || routeInfo?.duration || 'N/A'}`}
           </Text>
           
-          {/* Row 1: Route title + bus icon */}
           <View style={styles.cardHeader}>
             <View style={styles.routeInfo}>
               <Text style={styles.routeNum}>{routeInfo?.routeNum || 'Route'}</Text>
@@ -153,7 +195,6 @@ export default function RouteMapView({ route, navigation }) {
             <MaterialCommunityIcons name="bus" size={screenWidth * 0.095} color="#222" />
           </View>
 
-          {/* Row 2: Left (origin/destination) + Right (time aligned with origin, distance aligned with destination) */}
           <View style={styles.routeDetails}>
             <View style={styles.locationsContainer}>
               <View style={styles.locationRow}>
@@ -176,7 +217,7 @@ export default function RouteMapView({ route, navigation }) {
               </Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -256,13 +297,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 10,
-    maxHeight: screenHeight * 0.55,
+    overflow: 'hidden',
   },
   dragBar: {
-    width: screenWidth * 0.15,
-    height: 5,
+    width: screenWidth * 0.18,
+    height: 12,
     backgroundColor: '#ccc',
-    borderRadius: 3,
+    borderRadius: 6,
     alignSelf: 'center',
     marginBottom: screenHeight * 0.01,
   },
@@ -315,35 +356,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dottedLine: {
-    width: 2,
+    alignSelf: 'stretch',
     height: screenHeight * 0.04,
-    backgroundColor: 'transparent',
-    borderStyle: 'dotted',
-    borderLeftWidth: 2,
-    borderColor: '#bbb',
-    alignSelf: 'flex-start',
     marginLeft: screenWidth * 0.015,
-    marginVertical: screenHeight * 0.001,
+    borderLeftColor: '#bbb',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderStyle: 'dashed',
+    marginVertical: screenHeight * 0.002,
   },
   metricsContainer: {
     alignItems: 'flex-end',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     alignSelf: 'stretch',
   },
   metricsTime: {
     fontSize: screenWidth * 0.035,
     fontWeight: '500',
     color: '#222',
-    
+    marginBottom: screenHeight * 0.005,
   },
   metricsDistance: {
     fontSize: screenWidth * 0.035,
     color: '#666',
-  },
-  departureText: {
-    fontSize: screenWidth * 0.03,
-    color: '#888',
-    marginTop: screenHeight * 0.003,
-    fontStyle: 'italic',
   },
 });
