@@ -40,32 +40,6 @@ A comprehensive React Native application for public transport route planning in 
 - **Language**: JavaScript (ES6+)
 - **Deployment**: Vercel with GitHub integration
 
-### Tech Stack
-- React Native 0.81.4, React 19.1.0
-- Expo SDK 54
-- **Navigation**: @react-navigation/native, @react-navigation/native-stack
-- **Location**: expo-location
-- **Maps**: react-native-maps
-- **UI**: @expo/vector-icons, react-native-progress (available), custom fonts and colors
-- **Build/Config**: EAS (eas.json, app.json)
-
-### Project Structure
-
-**troski/**
-  - **index.js**: App entry, registers the navigator
-  - **navigation.js**: Stack navigator for screens
-  - **App.js**: Landing screen (splash-like), loads fonts then routes to HomeScreen    
-**components/**
-  - **HomeScreen.js**: Inputs, current location fetch, navigation to results
-  - **RouteResults.js**: Fetches candidate routes, map markers, bottom sheet list
-  - **RouteDetails.js**: Route metadata, traffic card, CTA to map
-  - **RouteMapView.js**: Fetches directions, decodes polyline, renders markers + polyline    
-**assets/**: Icons, splash, fonts, colors
-  - **package.json**: Scripts and dependencies
-  - **app.json**: Expo app config (iOS/Android bundles, splash, icons)    
-**eas.json**: Build profiles
-**react-native.config.js**: Font linking (for bare builds)
-**README.md**: All about the project
 
 ## 📱 App Structure
 
@@ -93,7 +67,6 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
 - **Default Display**: Shows 2 routes by default
 - **Dragbar Functionality**: Swipe up to reveal additional routes (3+)
 - **Responsive Design**: Adapts to different screen sizes
-- **Time Formatting**: Displays arrival times in HH:MM format
 
 #### Traffic Information System
 - **Real-time Data**: Fetches current traffic conditions
@@ -151,7 +124,7 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
 ### Prerequisites
 - Node.js (v14 or higher)
 - Expo CLI
-- Expo Go on IOS or Android
+- Expo Go App on IOS or Android
 - Google Maps API key
 - Vercel account (for backend deployment)
 
@@ -162,8 +135,8 @@ cd troski
 npm install
 npx expo start
 ```
-- on Android, scan qr code in development mode
-- on IOS, press s to switch to Expo Go mode and scan
+- on Android, scan QR code in development mode
+- on IOS, press s to switch to Expo Go mode and scan QR code
 
 ### Backend Setup
 ```bash
