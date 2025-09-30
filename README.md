@@ -127,6 +127,7 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
 - Expo Go App on IOS or Android
 - Google Maps API key
 - Vercel account (for backend deployment)
+Ensure the device running Expo CLI (desktop) and the device tesing using Expo Go (mobile) are on the same network.
 
 ### Frontend Setup
 ```bash
