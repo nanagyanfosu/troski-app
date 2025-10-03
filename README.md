@@ -6,13 +6,9 @@ A comprehensive React Native application for public transport route planning in 
 
 ### Core Functionality
 - **Route Planning**: Find optimal public transport routes between any two locations in Ghana
-
 - **Real-time Traffic Data**: Live traffic conditions with delay estimates
-
 - **Multiple Route Options**: Compare different route alternatives with detailed information
-
 - **Interactive Maps**: Visual route representation with markers and polylines
-
 - **Arrival Time Estimates**: Precise arrival time predictions based on current traffic
 
 ### Advanced Features
@@ -24,6 +20,7 @@ A comprehensive React Native application for public transport route planning in 
 - **Responsive Route Selection**: Drag-to-expand interface for 3+ routes
 - **Route Details**: Comprehensive information including distance, duration, and traffic conditions
 - **Fastest Route Highlighting**: Automatic identification of the quickest route
+- **Route Autocomplete**: Remote predictions of popular routes
 
 ## 🏗️ Architecture
 
@@ -34,50 +31,25 @@ A comprehensive React Native application for public transport route planning in 
 - **State Management**: React Hooks (useState, useEffect)
 - **UI Components**: Custom responsive components with dynamic sizing
 
+
 ### Backend (Node.js Serverless)
 - **Platform**: Vercel Serverless Functions
 - **API**: Google Maps Directions API
 - **Language**: JavaScript (ES6+)
 - **Deployment**: Vercel with GitHub integration
 
-### Tech Stack
-- React Native 0.81.4, React 19.1.0
-- Expo SDK 54
-- **Navigation**: @react-navigation/native, @react-navigation/native-stack
-- **Location**: expo-location
-- **Maps**: react-native-maps
-- **UI**: @expo/vector-icons, react-native-progress (available), custom fonts and colors
-- **Build/Config**: EAS (eas.json, app.json)
-
-### Project Structure
-
-**troski/**
-  - **index.js**: App entry, registers the navigator
-  - **navigation.js**: Stack navigator for screens
-  - **App.js**: Landing screen (splash-like), loads fonts then routes to HomeScreen    
-**components/**
-  - **HomeScreen.js**: Inputs, current location fetch, navigation to results
-  - **RouteResults.js**: Fetches candidate routes, map markers, bottom sheet list
-  - **RouteDetails.js**: Route metadata, traffic card, CTA to map
-  - **RouteMapView.js**: Fetches directions, decodes polyline, renders markers + polyline    
-**assets/**: Icons, splash, fonts, colors
-  - **package.json**: Scripts and dependencies
-  - **app.json**: Expo app config (iOS/Android bundles, splash, icons)    
-**eas.json**: Build profiles
-**react-native.config.js**: Font linking (for bare builds)
-**README.md**: All about the project
 
 ## 📱 App Structure
 
 ### Components
-1. **HomeScreen.js** - Origin and destination input
+1. **HomeScreen.js** - Origin and destination input. Includes autocomplete (local recents + remote predictions). Recents are editable (delete + undo).
 2. **RouteResults.js** - Route selection with interactive map
-3. **RouteDetails.js** - Detailed route information with traffic data
-4. **RouteMapView.js** - Full-screen map visualization
+3. **RouteDetails.js** - Detailed route information with traffic data, in-app toast on notification toggle, and traffic polling
+4. **RouteMapView.js** - Full-screen map visualization (visual polish such as an animated pulsing dotted divider)
 
 ### Screens Overview
 - **Landing (App.js)**: Font loading → auto-navigate to Home
-- **Home (HomeScreen)**: Get current location label, input origin/destination, find routes
+- **Home (HomeScreen)**: Get current location, input origin/destination, find routes
 - **Results (RouteResults)**: Calls backend /api/routes, shows markers/list, navigate to details
 - **Details (RouteDetails)**: Rich route info, traffic badge, CTA to map
 - **Map (RouteMapView)**: Calls backend /api/directions, draws polyline, shows time/distance
@@ -85,29 +57,13 @@ A comprehensive React Native application for public transport route planning in 
 ### Backend Integration
 - **Routes endpoint**: https://troski-backend.vercel.app/api/routes?origin=...&destination=...
 - **Directions endpoint**: https://troski-backend.vercel.app/api/directions?origin=...&destination=...
-Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update them if you deploy your own backend.
 
-### Key Features Implementation
-
-#### RouteResults Component
-- **Default Display**: Shows 2 routes by default
-- **Dragbar Functionality**: Swipe up to reveal additional routes (3+)
-- **Responsive Design**: Adapts to different screen sizes
-- **Time Formatting**: Displays arrival times in HH:MM format
-
-#### Traffic Information System
-- **Real-time Data**: Fetches current traffic conditions
-- **Severity Classification**: Automatic traffic level detection
-- **Visual Indicators**: Color-coded traffic status
-- **Delay Calculation**: Precise delay estimates in minutes
 
 ## 🛠️ Technical Implementation
 
 ### Backend API Endpoints
 
 #### `/api/routes`
-- **Method**: GET
-- **Parameters**: `origin`, `destination`
 - **Response**: Array of route objects with traffic data
 - **Features**:
   - Real-time traffic integration
@@ -116,8 +72,6 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
   - Traffic severity analysis
 
 #### `/api/directions`
-- **Method**: GET
-- **Parameters**: `origin`, `destination`
 - **Response**: Single route with detailed information
 - **Features**:
   - Detailed turn-by-turn directions
@@ -151,24 +105,24 @@ Note: These URLs are hardcoded in RouteResults.js and RouteMapView.js. Update th
 ### Prerequisites
 - Node.js (v14 or higher)
 - Expo CLI
-- Expo Go on IOS or Android
+- Expo Go App on IOS or Android
 - Google Maps API key
 - Vercel account (for backend deployment)
+Ensure the device running Expo CLI (desktop) and the device tesing using Expo Go (mobile) are on the same network.
 
 ### Frontend Setup
 ```bash
-cd troski-app/troski
+cd troski-app
+cd troski
 npm install
 npx expo start
 ```
-- on Android, scan qr code in development mode
-- on IOS, press s to switch to Expo Go mode and scan
+- on Android, scan QR code in development mode
+- on IOS, press s to switch to Expo Go mode and scan QR code
 
 ### Backend Setup
 ```bash
-cd troski-backend-1/troski-backend
+cd troski-backend-1
+cd troski-backend
 npm install
 ```
-
-### Environment Variables
-Create `.env` file in backend directory:
