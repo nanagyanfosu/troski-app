@@ -1,3 +1,7 @@
+// Polyfill for web crypto.getRandomValues used by modern `uuid` packages
+// Provides a React Native implementation so uuid.v4() works correctly.
+import 'react-native-get-random-values';
+
 import { registerRootComponent } from 'expo';
 
 import AppNavigator from './navigation';

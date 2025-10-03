@@ -1,0 +1,13 @@
+{
+  "name": "troski-push-server-example",
+  "version": "1.0.0",
+  "main": "push_server_example.js",
+  "scripts": {
+    "start": "node push_server_example.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "node-fetch": "^2.6.7"
+  }
+}
