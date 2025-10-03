@@ -114,6 +114,13 @@ export default function RouteResults({ route, navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.mapContainer}>
+        <View style={styles.headerRow}>
+                  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={screenWidth * 0.07} color="#222" />
+                  </TouchableOpacity>
+                  <Text style={styles.header}>Map View</Text>
+                  <View style={styles.placeholder} />
+                </View>
         <MapView
           style={styles.map}
           region={region}
@@ -207,6 +214,32 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: screenHeight * 0.01,
+    paddingHorizontal: screenWidth * 0.04,
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    paddingBottom: screenHeight * 0.015,
+  },
+  backButton: {
+    padding: screenWidth * 0.02,
+  },
+  header: {
+    fontSize: screenWidth * 0.05,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
+  placeholder: {
+    width: screenWidth * 0.07,
   },
   map: {
     flex: 1,

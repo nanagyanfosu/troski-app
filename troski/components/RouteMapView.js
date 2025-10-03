@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions, SafeAreaView, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Dimensions, SafeAreaView, Animated, PanResponder, Easing } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -15,6 +15,8 @@ export default function RouteMapView({ route, navigation }) {
   const [polylineCoords, setPolylineCoords] = useState([]);
   const [travelTime, setTravelTime] = useState('');
   const [distance, setDistance] = useState('');
+  const dotCount = 6;
+  const dotAnims = useRef(Array.from({ length: dotCount }, () => new Animated.Value(0.3))).current;
 
   // Draggable bottom sheet (collapsed by default, expandable to ~80% screen)
   const MIN_HEIGHT = screenHeight * 0.28;
@@ -126,6 +128,27 @@ export default function RouteMapView({ route, navigation }) {
     fetchDirections();
   }, [routeInfo]);
 
+  // Dotted divider animation: staggered pulsing loops for each dot
+  useEffect(() => {
+    const runners = dotAnims.map((anim, i) => {
+      const seq = Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 420, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.3, duration: 420, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]);
+      const loop = Animated.loop(seq);
+      const timer = setTimeout(() => loop.start(), i * 120);
+      return { loop, timer };
+    });
+
+    return () => {
+      runners.forEach(({ loop, timer }) => {
+        clearTimeout(timer);
+        try { loop.stop(); } catch (e) { /* ignore */ }
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -201,7 +224,20 @@ export default function RouteMapView({ route, navigation }) {
                 <Ionicons name="location-outline" size={screenWidth * 0.045} color="#222" style={{ marginRight: 6 }} />
                 <Text style={styles.value} numberOfLines={1}>{routeInfo?.origin || ''}</Text>
               </View>
-              <View style={styles.dottedLine} />
+              <View style={styles.dottedLine}>
+                {dotAnims.map((a, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.dot,
+                      {
+                        opacity: a,
+                        transform: [{ scale: a }],
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
               <View style={styles.locationRow}>
                 <Ionicons name="location-outline" size={screenWidth * 0.045} color="#222" style={{ marginRight: 6 }} />
                 <Text style={styles.value} numberOfLines={1}>{routeInfo?.destination || ''}</Text>
@@ -356,18 +392,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dottedLine: {
-    alignSelf: 'stretch',
+    alignSelf: 'flex-start',
     height: screenHeight * 0.04,
     marginLeft: screenWidth * 0.015,
-    borderLeftColor: '#bbb',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderStyle: 'dashed',
-    marginVertical: screenHeight * 0.002,
+    marginBottom: screenHeight * 0.005,
+    justifyContent: 'space-between',  
+    alignItems: 'center',
+
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#bbb',
+    marginVertical: 1.2,
   },
   metricsContainer: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    alignSelf: 'stretch',
+    alignItems: 'flex-end',    
+    alignSelf: 'flex-end',
   },
   metricsTime: {
     fontSize: screenWidth * 0.035,
