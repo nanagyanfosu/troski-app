@@ -170,7 +170,7 @@ export default function RouteResults({ route, navigation }) {
 
                   <View style={styles.rowBottom}>
                     <View style={styles.routeMeta}>
-                      <Ionicons name="git-compare-outline" size={screenWidth * 0.045} color="#888" />
+                      <Ionicons name="bus-outline" size={screenWidth * 0.045} color="#888" />
                       <Text style={styles.kmText}>{r.distance || ''}</Text>
                     </View>
 
